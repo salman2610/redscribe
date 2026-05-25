@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=32&pause=1000&color=BB2649&center=true&vCenter=true&width=600&lines=GhostWrite;AI+Pentest+Reporting;Your+reports%2C+written+by+a+ghost." alt="GhostWrite" />
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=32&pause=1000&color=BB2649&center=true&vCenter=true&width=700&lines=RedScribe;AI-Powered+Pentest+Reporting;Raw+scans+%E2%86%92+Client+reports%2C+fast." alt="RedScribe" />
 
 <br/>
 
@@ -15,20 +15,21 @@
 [![License](https://img.shields.io/badge/License-MIT-BB2649?style=flat-square)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Active_Development-22C55E?style=flat-square)]()
 [![AI](https://img.shields.io/badge/AI-Ollama_%7C_Gemini_%7C_OpenAI_%7C_Anthropic-7B2FBE?style=flat-square)]()
+[![Built by](https://img.shields.io/badge/Built_by-Pentester-BB2649?style=flat-square)]()
 
 </div>
 
 ---
 
-## 👻 What is GhostWrite?
+## 🔴 What is RedScribe?
 
-GhostWrite is an **AI-powered pentest reporting platform** built by a pentester, for pentesters.
+RedScribe is an **AI-powered pentest reporting platform** built by a pentester, for pentesters.
 
 Upload your scan files → AI parses, deduplicates, and enriches every finding → export a professional PDF/DOCX report in minutes.
 
 > *"The tool you wish existed when you started your first VAPT engagement."*
 
-Most pentesters spend **30-40% of engagement time** writing reports. GhostWrite cuts that to under an hour.
+Most pentesters spend **30–40% of engagement time** writing reports. RedScribe cuts that to under an hour.
 
 ---
 
@@ -39,7 +40,7 @@ Most pentesters spend **30-40% of engagement time** writing reports. GhostWrite 
 <td width="50%">
 
 ### 🔍 Smart Parsing
-- **Nmap XML** — full service/OS detection
+- **Nmap XML** — full service/OS/script detection
 - **Burp Suite** — issues export with request/response
 - **Nessus** — vulnerability scan results
 - **Nikto, SSLScan, ffuf, Nuclei** — coming soon
@@ -74,7 +75,7 @@ Most pentesters spend **30-40% of engagement time** writing reports. GhostWrite 
 - JWT authentication
 - Role-based access control
 - Per-user project isolation
-- Audit trail
+- Full audit trail
 - Self-hostable, air-gapped ready
 
 </td>
@@ -85,11 +86,11 @@ Most pentesters spend **30-40% of engagement time** writing reports. GhostWrite 
 
 ## 🧠 AI Provider Support
 
-GhostWrite uses an abstracted AI provider layer — swap providers with one config change:
+RedScribe uses an abstracted AI provider layer — swap providers with one config change:
 
 | Provider | Model | Status |
 |---|---|---|
-| 🦙 Ollama (Local) | llama3.2, mistral | ✅ Default — free, private |
+| 🦙 Ollama (Local) | llama3.2, mistral | ✅ Default — free, private, no limits |
 | 🔵 Google Gemini | gemini-2.0-flash | ✅ Free tier |
 | 🟠 Groq | llama3-70b | ✅ Fast inference |
 | 🟣 Anthropic | claude-sonnet-4-6 | ✅ Best quality |
@@ -102,8 +103,8 @@ GhostWrite uses an abstracted AI provider layer — swap providers with one conf
 ### Docker (Recommended)
 
 ```bash
-git clone https://github.com/salman2610/ghostwrite.git
-cd ghostwrite
+git clone https://github.com/salman2610/redscribe.git
+cd redscribe
 docker-compose up -d
 ```
 
@@ -120,7 +121,7 @@ cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env   # edit with your settings
+cp .env.example .env
 uvicorn main:app --reload --port 8000
 ```
 
@@ -130,33 +131,6 @@ cd frontend
 npm install
 npm run dev
 ```
-
-**Default login:** `admin@ghostwrite.com` / `admin123`
-
----
-
-## 📸 Screenshots
-
-<table>
-<tr>
-<td align="center"><b>Login</b></td>
-<td align="center"><b>Dashboard</b></td>
-</tr>
-<tr>
-<td align="center"><i>Clean dark UI, JWT auth</i></td>
-<td align="center"><i>Project overview, quick actions</i></td>
-</tr>
-<tr>
-<td align="center"><b>Findings</b></td>
-<td align="center"><b>AI Enrichment</b></td>
-</tr>
-<tr>
-<td align="center"><i>Severity-coded, filterable</i></td>
-<td align="center"><i>One-click AI analysis</i></td>
-</tr>
-</table>
-
-> Screenshots coming soon — project is in active development.
 
 ---
 
@@ -174,7 +148,7 @@ npm run dev
                                             │
                     ┌───────────────────────▼──────────────────────┐
                     │              AI Provider Layer                │
-                    │   Ollama (local) │ Gemini │ Groq │ OpenAI    │
+                    │   Ollama (local) │ Gemini │ Groq │ OpenAI   │
                     └──────────────────────────────────────────────┘
 ```
 
@@ -183,7 +157,7 @@ npm run dev
 ## 📁 Project Structure
 
 ```
-ghostwrite/
+redscribe/
 ├── backend/
 │   ├── main.py              # FastAPI app
 │   ├── models/              # SQLAlchemy models
@@ -221,7 +195,9 @@ ghostwrite/
 - [x] Burp Suite Parser
 - [x] AI Enrichment (multi-provider)
 - [x] Executive Summary Generation
-- [ ] Nikto / SSLScan / Nuclei parsers
+- [x] Project Dashboard UI
+- [x] Findings Detail UI with severity coding
+- [ ] Nessus / Nikto / SSLScan / Nuclei parsers
 - [ ] PDF Export
 - [ ] DOCX Export
 - [ ] Screenshot-to-Finding mapper
@@ -234,21 +210,20 @@ ghostwrite/
 
 ## 🛠️ API Reference
 
-Full interactive API docs available at `http://localhost:8000/docs` when running locally.
-
-Key endpoints:
+Full interactive docs at `http://localhost:8000/docs` when running locally.
 
 ```
-POST   /auth/login                    Login
-POST   /auth/register                 Register
-GET    /projects                      List projects
-POST   /projects                      Create project
-POST   /uploads/project/{id}/nmap     Upload Nmap XML
-POST   /uploads/project/{id}/burp     Upload Burp XML
-GET    /findings/project/{id}         List findings
-POST   /ai/enrich/{finding_id}        AI enrich finding
-POST   /ai/enrich-all/{project_id}    Enrich all findings
-POST   /ai/executive-summary/{id}     Generate summary
+POST   /auth/login                     Login
+POST   /auth/register                  Register
+GET    /projects                       List projects
+POST   /projects                       Create project
+POST   /uploads/project/{id}/nmap      Upload Nmap XML
+POST   /uploads/project/{id}/burp      Upload Burp XML
+GET    /findings/project/{id}          List findings
+POST   /ai/enrich/{finding_id}         AI enrich single finding
+POST   /ai/enrich-all/{project_id}     Enrich all findings
+POST   /ai/executive-summary/{id}      Generate executive summary
+POST   /ai/rewrite                     Rewrite text in chosen tone
 ```
 
 ---
@@ -267,7 +242,7 @@ git push origin feature/your-feature
 
 ## 👤 Author
 
-Built by **[Salmanul Faris P](https://github.com/salman2610)** — Cybersecurity Engineer & Penetration Tester
+Built by **[Salmanul Faris P](https://github.com/salman2610)** — Cybersecurity Engineer & Penetration Tester (CPT)
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=flat-square&logo=linkedin)](https://www.linkedin.com/in/p-salmanul-faris-68b733249/)
 [![Portfolio](https://img.shields.io/badge/Portfolio-Visit-BB2649?style=flat-square&logo=githubpages)](https://salman2610.github.io)
@@ -285,6 +260,6 @@ MIT License — use it, fork it, build on it.
 
 ⭐ **Star this repo if you find it useful** — it helps more people discover it!
 
-*GhostWrite — Your pentest reports, written by a ghost.* 👻
+*RedScribe — Built by a pentester. For pentesters.*
 
 </div>
