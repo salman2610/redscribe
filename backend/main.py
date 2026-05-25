@@ -10,15 +10,15 @@ from routers import auth, projects, findings, uploads, reports, templates, ai
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("✅ GhostWrite starting up...")
+    print("✅ RedScribe starting up...")
     from models.database import create_tables
     await create_tables()
     print("✅ Database tables ready")
     yield
-    print("🛑 GhostWrite shutting down...")
+    print("🛑 RedScribe shutting down...")
 
 app = FastAPI(
-    title="GhostWrite API",
+    title="RedScribe API",
     description="AI-Assisted Pentest Reporting Platform",
     version="1.0.0",
     lifespan=lifespan
@@ -42,7 +42,7 @@ app.include_router(ai.router, prefix="/ai", tags=["AI"])
 
 @app.get("/")
 async def root():
-    return {"message": "GhostWrite API", "status": "running", "version": "1.0.0"}
+    return {"message": "RedScribe API", "status": "running", "version": "1.0.0"}
 
 @app.get("/health")
 async def health():
