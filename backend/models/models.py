@@ -7,11 +7,11 @@ import uuid
 import enum
 
 class SeverityEnum(str, enum.Enum):
-    critical = "Critical"
-    high = "High"
-    medium = "Medium"
-    low = "Low"
-    info = "Info"
+    critical = "critical"
+    high = "high"
+    medium = "medium"
+    low = "low"
+    info = "info"
 
 class StatusEnum(str, enum.Enum):
     open = "open"
@@ -32,7 +32,7 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     projects = relationship("Project", back_populates="user")
-    templates = relationship("Template", back_populates="user")
+    templates = relationship("Template", back_populates="user", cascade="all, delete-orphan")
 
 class Project(Base):
     __tablename__ = "projects"
@@ -43,6 +43,8 @@ class Project(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     scope = Column(Text, nullable=True)
     methodology = Column(Text, nullable=True)
+    tester_name = Column(String(255), nullable=True)
+    classification = Column(String(100), nullable=True)
     ai_provider = Column(String, default="anthropic")
     status = Column(String, default="active")
     start_date = Column(DateTime, nullable=True)
@@ -122,12 +124,14 @@ class Template(Base):
     title = Column(String, nullable=False)
     severity = Column(Enum(SeverityEnum), nullable=False)
     cvss_score = Column(Float, nullable=True)
+    cvss_vector = Column(String, nullable=True)
     cwe = Column(String, nullable=True)
     owasp = Column(String, nullable=True)
     description = Column(Text, nullable=True)
     remediation = Column(Text, nullable=True)
     variables = Column(JSON, default=list)
     is_public = Column(Boolean, default=False)
+    is_global = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="templates")

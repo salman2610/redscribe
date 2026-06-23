@@ -6,6 +6,7 @@ from models.models import Finding, Project, UploadJob, SeverityEnum
 from routers.auth import get_current_user
 from models.models import User
 from parsers.nmap import parse_nmap_xml
+from parsers.nessus import parse_nessus, validate_nessus
 from parsers.burp import parse_burp_xml
 import uuid
 

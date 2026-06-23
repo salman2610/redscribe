@@ -6,8 +6,8 @@ from models.models import Finding, Project, User
 from routers.auth import get_current_user
 from providers.factory import get_provider
 from datetime import datetime
+from typing import Optional
 import uuid
-
 router = APIRouter()
 
 @router.post("/enrich/{finding_id}")
@@ -162,7 +162,7 @@ async def rewrite_text(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    valid_tones = ["technical", "executive", "compliance", "client"]
+    valid_tones = ["technical", "executive", "compliance", "client", "concise"]
     if tone not in valid_tones:
         raise HTTPException(status_code=400, detail=f"Tone must be one of {valid_tones}")
 
@@ -172,3 +172,31 @@ async def rewrite_text(
         return {"original": text, "rewritten": rewritten, "tone": tone}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI failed: {str(e)}")
+from pydantic import BaseModel
+
+class ImproveRequest(BaseModel):
+    text: str
+    field: str  # description, remediation, impact, scenario
+    context: Optional[str] = ""
+
+@router.post("/improve")
+async def improve_text(
+    data: ImproveRequest,
+    current_user: User = Depends(get_current_user),
+):
+    prompts = {
+        "description": "You are a senior penetration tester. Rewrite this finding description professionally for a client security report. Be specific, technical, and clear. No markdown.",
+        "remediation": "You are a senior penetration tester. Rewrite this remediation advice professionally. Make it specific, actionable, and prioritized. No markdown.",
+        "business_impact": "You are a CISO writing for executives. Rewrite this business impact statement professionally. Focus on risk to the business, not technical details. No markdown.",
+        "attack_scenario": "You are a senior penetration tester. Rewrite this attack scenario professionally. Make it realistic and narrative. No markdown.",
+    }
+
+    system = prompts.get(data.field, "Rewrite this text professionally for a pentest report. No markdown.")
+    user_prompt = f"Original text:\n{data.text}\n\nContext: {data.context}"
+
+    try:
+        provider = get_provider()
+        result = await provider.rewrite(user_prompt, "technical")
+        return {"improved": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI improve failed: {str(e)}")

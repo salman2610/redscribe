@@ -6,7 +6,8 @@ import httpx
 import os
 from providers.base import BaseAIProvider
 
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent"
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 
 class GeminiProvider(BaseAIProvider):
 
@@ -95,7 +96,8 @@ Top findings: {chr(10).join(titles)}"""
             "executive": "a CISO writing for C-suite executives, non-technical",
             "compliance": "a compliance officer writing for auditors",
             "client": "a consultant writing for non-technical business owners",
+            "concise": "a technical writer who is extremely concise and direct",
         }
         persona = tones.get(tone, tones["technical"])
-        prompt = f"You are {persona}. Rewrite the following security text in your voice. Keep the facts, change the style.\n\n{text}"
+        prompt = f"You are {persona}. Rewrite the following security finding text. Rules: 1) Output ONLY the rewritten text, no preamble, no explanations, no meta-commentary. 2) Keep all technical facts. 3) Match the tone for your audience. 4) No markdown.\n\nText to rewrite:\n{text}"
         return await self._chat(prompt)

@@ -6,7 +6,7 @@ import os
 
 load_dotenv()
 
-from routers import auth, projects, findings, uploads, reports, templates, ai, evidence, assets, attack_chains
+from routers import auth, projects, findings, uploads, reports, templates, ai, evidence
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -40,8 +40,6 @@ app.include_router(uploads.router, prefix="/uploads", tags=["Uploads"])
 app.include_router(reports.router, prefix="/reports", tags=["Reports"])
 app.include_router(templates.router, prefix="/templates", tags=["Templates"])
 app.include_router(evidence.router, tags=["Evidence"])
-app.include_router(assets.router, tags=["Assets"])
-app.include_router(attack_chains.router, tags=["Attack Chains"])
 app.include_router(ai.router, prefix="/ai", tags=["AI"])
 
 @app.get("/")
@@ -51,3 +49,4 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
+
