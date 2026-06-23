@@ -81,6 +81,7 @@ class Finding(Base):
     source_file = Column(String, nullable=True)
     tags = Column(JSON, default=list)
     status = Column(Enum(StatusEnum), default=StatusEnum.open)
+    sort_order = Column(Integer, default=0)
     template_id = Column(UUID(as_uuid=True), ForeignKey("templates.id"), nullable=True)
     ai_enriched = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)

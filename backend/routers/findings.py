@@ -72,6 +72,7 @@ def finding_to_dict(f: Finding) -> dict:
         "ai_enriched": f.ai_enriched,
         "created_at": f.created_at,
         "updated_at": f.updated_at,
+        "sort_order": f.sort_order,
     }
 
 async def get_project_or_404(project_id: str, user_id, db):
@@ -94,7 +95,7 @@ async def get_findings(
 ):
     await get_project_or_404(project_id, current_user.id, db)
     result = await db.execute(
-        select(Finding).where(Finding.project_id == uuid.UUID(project_id))
+        select(Finding).where(Finding.project_id == uuid.UUID(project_id)).order_by(Finding.sort_order)
     )
     findings = result.scalars().all()
     return [finding_to_dict(f) for f in findings]
@@ -168,3 +169,24 @@ async def delete_finding(
     await db.delete(finding)
     await db.commit()
     return {"message": "Finding deleted"}
+
+from pydantic import BaseModel as PydanticBase
+from typing import List as PyList
+
+class ReorderRequest(PydanticBase):
+    finding_ids: PyList[str]
+
+@router.post("/project/{project_id}/reorder")
+async def reorder_findings(
+    project_id: str,
+    data: ReorderRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    for i, finding_id in enumerate(data.finding_ids):
+        result = await db.execute(select(Finding).where(Finding.id == finding_id))
+        finding = result.scalar_one_or_none()
+        if finding:
+            finding.sort_order = i
+    await db.commit()
+    return {"reordered": True}
