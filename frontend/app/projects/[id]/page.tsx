@@ -402,7 +402,7 @@ export default function ProjectDetail() {
               <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px'}}>
                 <div className="form-field">
                   <label className="form-label">CVSS Score</label>
-                  <input className="form-input" type="number" step="0.1" value={newFinding.cvss_score || ''} onChange={e => setNewFinding({...newFinding, cvss_score: e.target.value ? parseFloat(e.target.value) : null})} />
+                  <input className="form-input" type="number" step="0.1" value={newFinding.cvss_score || ''} onChange={e => setNewFinding({...newFinding, cvss_score: e.target.value ? parseFloat(e.target.value) : null as any})} />
                 </div>
                 <div className="form-field">
                   <label className="form-label">CWE</label>
