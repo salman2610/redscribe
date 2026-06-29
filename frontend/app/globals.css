@@ -1,0 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #080808;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+}
+
+/* Subtle grid - CSS only, no GPU */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Glass cards - NO blur, just transparency */
+.stat-card, .finding-card {
+  background: rgba(255,255,255,0.03) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  transition: border-color 0.2s, background 0.2s !important;
+}
+
+.stat-card:hover, .finding-card:hover {
+  background: rgba(255,255,255,0.05) !important;
+  border-color: rgba(204,0,0,0.2) !important;
+}
+
+/* Nav - single blur only */
+nav, .nav {
+  background: rgba(6,6,6,0.85) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+/* Inputs */
+input, textarea, select {
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  color: #fff !important;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: rgba(204,0,0,0.5) !important;
+  outline: none !important;
+}
+
+/* Modal overlay - single blur */
+.modal-overlay, .fm-overlay {
+  background: rgba(0,0,0,0.75) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+}
+
+/* Modal content - no blur */
+.modal, .fm-modal {
+  background: rgba(10,10,10,0.97) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(204,0,0,0.3); border-radius: 2px; }
+
+/* Selection */
+::selection { background: rgba(204,0,0,0.3); color: #fff; }
