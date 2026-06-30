@@ -3,387 +3,276 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 const FINDINGS = [
-  { sev: 'CRITICAL', color: '#ef4444', title: 'SQL Injection — Login Form', cvss: '9.8', cwe: 'CWE-89' },
-  { sev: 'CRITICAL', color: '#ef4444', title: 'Remote Code Execution', cvss: '9.0', cwe: 'CWE-434' },
-  { sev: 'HIGH', color: '#f97316', title: 'Broken JWT Authentication', cvss: '8.1', cwe: 'CWE-287' },
-  { sev: 'HIGH', color: '#f97316', title: 'SSRF via Payment Webhook', cvss: '7.5', cwe: 'CWE-918' },
-  { sev: 'MEDIUM', color: '#eab308', title: 'Reflected XSS — Search', cvss: '6.1', cwe: 'CWE-79' },
-  { sev: 'MEDIUM', color: '#eab308', title: 'CORS Misconfiguration', cvss: '5.4', cwe: 'CWE-346' },
-  { sev: 'LOW', color: '#3b82f6', title: 'Missing Security Headers', cvss: '3.1', cwe: 'CWE-693' },
+  { sev: 'CRITICAL', color: '#ff1744', title: 'SQL Injection — Login Form', cvss: '9.8', cwe: 'CWE-89' },
+  { sev: 'CRITICAL', color: '#ff1744', title: 'Remote Code Execution', cvss: '9.0', cwe: 'CWE-434' },
+  { sev: 'HIGH', color: '#ff6d00', title: 'Broken JWT Authentication', cvss: '8.1', cwe: 'CWE-287' },
+  { sev: 'HIGH', color: '#ff6d00', title: 'SSRF via Payment Webhook', cvss: '7.5', cwe: 'CWE-918' },
+  { sev: 'MEDIUM', color: '#ffd600', title: 'Reflected XSS — Search', cvss: '6.1', cwe: 'CWE-79' },
 ];
 
 const TERMINAL_LINES = [
-  { delay: 0, text: '$ redscribe scan --target acme-corp.com', color: '#fff' },
-  { delay: 800, text: '▶ Parsing Nmap XML...', color: '#888' },
-  { delay: 1400, text: '▶ Parsing Burp Suite export...', color: '#888' },
-  { delay: 2000, text: '▶ AI enriching 7 findings...', color: '#888' },
-  { delay: 2800, text: '✓ Found 2 CRITICAL vulnerabilities', color: '#ef4444' },
-  { delay: 3200, text: '✓ Found 2 HIGH vulnerabilities', color: '#f97316' },
-  { delay: 3600, text: '✓ Report generated: acme-report.pdf', color: '#22c55e' },
-  { delay: 4200, text: '▶ Time elapsed: 47 seconds', color: '#a855f7' },
+  { delay: 0, text: '$ redscribe scan --target acme-corp.com', color: '#e2e8f0' },
+  { delay: 700, text: '  ▸ Parsing Nmap XML...', color: '#64748b' },
+  { delay: 1300, text: '  ▸ Parsing Burp Suite export...', color: '#64748b' },
+  { delay: 1900, text: '  ▸ AI enriching 7 findings...', color: '#64748b' },
+  { delay: 2700, text: '  ✓ 2 CRITICAL vulnerabilities found', color: '#ff1744' },
+  { delay: 3100, text: '  ✓ 2 HIGH vulnerabilities found', color: '#ff6d00' },
+  { delay: 3500, text: '  ✓ Report generated: acme-report.pdf', color: '#4ade80' },
+  { delay: 4100, text: '  ▸ Time elapsed: 47 seconds', color: '#a78bfa' },
 ];
 
 export default function LandingPage() {
   const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [showDemo, setShowDemo] = useState(false);
-  const [terminalLines, setTerminalLines] = useState<number[]>([]);
-  const [terminalStarted, setTerminalStarted] = useState(false);
-  const terminalRef = useRef<HTMLDivElement>(null);
-  const heroRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [termLines, setTermLines] = useState<number[]>([]);
+  const [termStarted, setTermStarted] = useState(false);
+  const [heroProgress, setHeroProgress] = useState(0);
+  const termRef = useRef<HTMLDivElement>(null);
+  const heroPinRef = useRef<HTMLDivElement>(null);
 
-  // Scroll handler
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const onScroll = () => {
+      setScrolled(window.scrollY > 40);
+      if (heroPinRef.current) {
+        const rect = heroPinRef.current.getBoundingClientRect();
+        const total = heroPinRef.current.offsetHeight - window.innerHeight;
+        const scrolled2 = -rect.top;
+        const p = Math.min(Math.max(scrolled2 / total, 0), 1);
+        setHeroProgress(p);
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Scroll reveal
   useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(el => {
-        if (el.isIntersecting) {
-          el.target.classList.add('visible');
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          const el = e.target as HTMLElement;
+          const d = parseFloat(el.dataset.delay || '0');
+          setTimeout(() => el.classList.add('show'), d * 1000);
+          obs.unobserve(el);
         }
       });
-    }, { threshold: 0.1 });
-    document.querySelectorAll('.reveal, .reveal-up, .reveal-left, .reveal-right').forEach(el => observer.observe(el));
-    return () => observer.disconnect();
+    }, { threshold: 0.07, rootMargin: '0px 0px -32px 0px' });
+    document.querySelectorAll('[data-reveal]').forEach(el => obs.observe(el));
+    return () => obs.disconnect();
   }, []);
 
-  // Terminal animation
   useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && !terminalStarted) {
-        setTerminalStarted(true);
-        TERMINAL_LINES.forEach((line, i) => {
-          setTimeout(() => setTerminalLines(prev => [...prev, i]), line.delay);
-        });
+    const obs = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && !termStarted) {
+        setTermStarted(true);
+        TERMINAL_LINES.forEach((_, i) => setTimeout(() => setTermLines(p => [...p, i]), TERMINAL_LINES[i].delay));
       }
     }, { threshold: 0.3 });
-    if (terminalRef.current) observer.observe(terminalRef.current);
-    return () => observer.disconnect();
-  }, [terminalStarted]);
+    if (termRef.current) obs.observe(termRef.current);
+    return () => obs.disconnect();
+  }, [termStarted]);
 
-  // Particle canvas
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    const particles: any[] = [];
-    for (let i = 0; i < 60; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        size: Math.random() * 1.5 + 0.5,
-        opacity: Math.random() * 0.4 + 0.1,
-      });
-    }
-    let animId: number;
-    function draw() {
-      if (!ctx || !canvas) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particles.forEach(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < 0) p.x = canvas.width;
-        if (p.x > canvas.width) p.x = 0;
-        if (p.y < 0) p.y = canvas.height;
-        if (p.y > canvas.height) p.y = 0;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(204,0,0,${p.opacity})`;
-        ctx.fill();
-      });
-      // Draw connections
-      particles.forEach((a, i) => {
-        particles.slice(i + 1).forEach(b => {
-          const dist = Math.hypot(a.x - b.x, a.y - b.y);
-          if (dist < 120) {
-            ctx.beginPath();
-            ctx.moveTo(a.x, a.y);
-            ctx.lineTo(b.x, b.y);
-            ctx.strokeStyle = `rgba(204,0,0,${0.08 * (1 - dist / 120)})`;
-            ctx.lineWidth = 0.5;
-            ctx.stroke();
-          }
-        });
-      });
-      animId = requestAnimationFrame(draw);
-    }
-    draw();
-    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
-    window.addEventListener('resize', resize);
-    return () => { cancelAnimationFrame(animId); window.removeEventListener('resize', resize); };
-  }, []);
+  // Derived transforms for the pinned hero
+  const titleScale = 1 - heroProgress * 0.45;
+  const titleY = heroProgress * -120;
+  const titleSkew = heroProgress * 6;
+  const subOpacity = Math.max(0, 1 - heroProgress * 3);
+  const lateOpacity = Math.min(1, Math.max(0, (heroProgress - 0.5) * 3));
+  const lateY = (1 - lateOpacity) * 40;
+  const glitch = heroProgress > 0.3 && heroProgress < 0.7;
 
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-        html { scroll-behavior: smooth; }
-        body { background: #050505; color: #fff; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+        html{scroll-behavior:smooth;}
+        body{background:#030303;color:#fff;font-family:'Inter',sans-serif;overflow-x:hidden;}
 
-        /* Scanline effect */
-        body::after {
-          content: '';
-          position: fixed;
-          inset: 0;
-          background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
-          pointer-events: none;
-          z-index: 999;
+        .bg-mesh{position:fixed;inset:0;z-index:0;pointer-events:none;
+          background:
+            radial-gradient(ellipse 70% 50% at 15% 0%, rgba(255,23,68,0.10) 0%, transparent 55%),
+            radial-gradient(ellipse 50% 40% at 90% 90%, rgba(255,23,68,0.06) 0%, transparent 60%);
+        }
+        .grid-overlay{position:fixed;inset:0;z-index:0;pointer-events:none;
+          background-image:linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px);
+          background-size:56px 56px;
+          mask-image:radial-gradient(ellipse 80% 80% at 50% 30%, black 30%, transparent 100%);
         }
 
-        /* Scroll reveal */
-        .reveal, .reveal-up, .reveal-left, .reveal-right {
-          opacity: 0;
-          transition: opacity 0.8s ease, transform 0.8s ease;
+        [data-reveal]{opacity:0;transform:translateY(36px);transition:opacity .85s cubic-bezier(.16,1,.3,1),transform .85s cubic-bezier(.16,1,.3,1);}
+        [data-reveal="right"]{transform:translateX(48px);}
+        [data-reveal].show{opacity:1;transform:none;}
+        [data-delay="0.1"]{transition-delay:.1s;} [data-delay="0.15"]{transition-delay:.15s;}
+        [data-delay="0.2"]{transition-delay:.2s;} [data-delay="0.25"]{transition-delay:.25s;}
+        [data-delay="0.3"]{transition-delay:.3s;} [data-delay="0.35"]{transition-delay:.35s;}
+        [data-delay="0.4"]{transition-delay:.4s;} [data-delay="0.5"]{transition-delay:.5s;}
+        [data-delay="0.6"]{transition-delay:.6s;} [data-delay="0.7"]{transition-delay:.7s;}
+
+        .nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:20px 64px;display:flex;align-items:center;justify-content:space-between;transition:all .5s cubic-bezier(.16,1,.3,1);}
+        .nav.scrolled{background:rgba(3,3,3,0.85);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.05);padding:14px 64px;}
+        .nav-logo{cursor:pointer;display:flex;align-items:center;}
+        .nav-logo img{height:58px;width:auto;filter:drop-shadow(0 0 16px rgba(255,23,68,0.5));}
+        .nav-links{display:flex;gap:36px;}
+        .nav-link{font-size:13px;color:rgba(255,255,255,0.35);cursor:pointer;text-decoration:none;letter-spacing:.3px;transition:color .3s;}
+        .nav-link:hover{color:#fff;}
+        .nav-cta{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:#ff1744;background:rgba(255,23,68,0.08);border:1px solid rgba(255,23,68,0.3);padding:10px 26px;cursor:pointer;letter-spacing:2px;text-transform:uppercase;transition:all .3s;clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,0 100%);}
+        .nav-cta:hover{background:#ff1744;color:#000;box-shadow:0 0 30px rgba(255,23,68,0.5);}
+
+        /* PINNED HERO */
+        .hero-pin-wrap{position:relative;height:280vh;z-index:1;isolation:isolate;}
+        .hero-pin{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;text-align:center;padding:0 24px;}
+        .hero-tag{font-family:'JetBrains Mono',monospace;font-size:11px;color:#ff1744;letter-spacing:5px;text-transform:uppercase;margin-bottom:24px;text-shadow:0 0 20px rgba(255,23,68,0.6);}
+        .hero-title{font-weight:900;line-height:0.92;letter-spacing:-4px;will-change:transform;font-size:clamp(48px,9vw,140px);}
+        .hero-title .line2{
+          color:#ff1744;
+          text-shadow:0 0 30px rgba(255,23,68,0.8),0 0 60px rgba(255,23,68,0.4),0 0 100px rgba(255,23,68,0.2);
         }
-        .reveal { transform: translateY(32px); }
-        .reveal-left { transform: translateX(-48px); }
-        .reveal-right { transform: translateX(48px); }
-        .reveal.visible, .reveal-up.visible, .reveal-left.visible, .reveal-right.visible {
-          opacity: 1; transform: none;
+        .glitch{animation:glitchAnim .15s infinite;}
+        @keyframes glitchAnim{
+          0%{clip-path:inset(0 0 0 0);}
+          20%{clip-path:inset(10% 0 60% 0);transform:translateX(-4px);}
+          40%{clip-path:inset(70% 0 5% 0);transform:translateX(4px);}
+          60%{clip-path:inset(40% 0 40% 0);transform:translateX(-2px);}
+          80%{clip-path:inset(5% 0 80% 0);transform:translateX(2px);}
+          100%{clip-path:inset(0 0 0 0);}
         }
-        .reveal-up { transform: translateY(16px); }
+        .hero-sub{font-size:16px;color:rgba(255,255,255,0.4);max-width:480px;margin:32px auto 0;line-height:1.7;}
+        .hero-late{position:absolute;bottom:14vh;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:32px;width:100%;padding:0 24px;}
+        .hero-btns{display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:center;}
+        .btn-primary{background:linear-gradient(135deg,#ff1744,#b3000f);color:#fff;border:none;padding:16px 40px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%);transition:all .3s;box-shadow:0 8px 32px rgba(255,23,68,0.4),inset 0 1px 0 rgba(255,255,255,0.15);}
+        .btn-primary:hover{transform:translateY(-2px);box-shadow:0 16px 48px rgba(255,23,68,0.6);}
+        .btn-outline{background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.12);padding:16px 32px;font-size:13px;font-weight:500;cursor:pointer;transition:all .3s;}
+        .btn-outline:hover{background:rgba(255,255,255,0.08);color:#fff;border-color:rgba(255,255,255,0.25);}
+        .hero-stats{display:flex;gap:40px;}
+        .stat-n{font-size:26px;font-weight:900;letter-spacing:-1px;color:#fff;}
+        .stat-l{font-size:11px;color:rgba(255,255,255,0.55);margin-top:2px;font-family:'JetBrains Mono',monospace;letter-spacing:.5px;}
+        .scroll-hint{position:absolute;bottom:4vh;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,0.2);letter-spacing:3px;text-transform:uppercase;display:flex;flex-direction:column;align-items:center;gap:10px;}
+        .scroll-line{width:1px;height:36px;background:linear-gradient(to bottom,#ff1744,transparent);animation:scrollPulse 1.6s ease-in-out infinite;}
+        @keyframes scrollPulse{0%,100%{opacity:.3;transform:scaleY(.6);}50%{opacity:1;transform:scaleY(1);}}
 
-        /* Stagger children */
-        .stagger > *:nth-child(1) { transition-delay: 0s; }
-        .stagger > *:nth-child(2) { transition-delay: 0.08s; }
-        .stagger > *:nth-child(3) { transition-delay: 0.16s; }
-        .stagger > *:nth-child(4) { transition-delay: 0.24s; }
-        .stagger > *:nth-child(5) { transition-delay: 0.32s; }
-        .stagger > *:nth-child(6) { transition-delay: 0.4s; }
-        .stagger > *:nth-child(7) { transition-delay: 0.48s; }
+        /* FLOATING CARDS that fade in around the title mid-scroll */
+        .fc-field{position:absolute;inset:0;pointer-events:none;}
+        .fc{position:absolute;background:rgba(255,255,255,0.04);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:9px;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,0.4);}
+        .fc-sev{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;padding:3px 7px;border-radius:3px;letter-spacing:1px;white-space:nowrap;}
+        .fc-title{font-size:10px;font-weight:600;color:rgba(255,255,255,0.8);flex:1;}
+        .fc-cvss{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;}
 
-        /* NAV */
-        .nav {
-          position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-          padding: 20px 60px; display: flex; align-items: center; justify-content: space-between;
-          transition: all 0.4s;
-        }
-        .nav.scrolled {
-          background: rgba(5,5,5,0.9);
-          backdrop-filter: blur(20px);
-          border-bottom: 1px solid rgba(255,255,255,0.05);
-          padding: 14px 60px;
-        }
-        .nav-logo img { height: 48px; width: auto; }
-        .nav-links { display: flex; gap: 36px; }
-        .nav-link { font-size: 13px; color: #444; cursor: pointer; text-decoration: none; transition: color 0.3s; letter-spacing: 0.3px; }
-        .nav-link:hover { color: #fff; }
-        .nav-cta {
-          background: transparent; color: #CC0000;
-          border: 1px solid rgba(204,0,0,0.35);
-          padding: 9px 24px; font-size: 12px; font-weight: 600;
-          cursor: pointer; letter-spacing: 1.5px; text-transform: uppercase;
-          font-family: 'JetBrains Mono', monospace; transition: all 0.3s;
-        }
-        .nav-cta:hover { background: #CC0000; color: #fff; border-color: #CC0000; }
+        .ticker{position:relative;z-index:1;overflow:hidden;padding:13px 0;background:rgba(255,255,255,0.02);border-top:1px solid rgba(255,255,255,0.05);border-bottom:1px solid rgba(255,255,255,0.05);}
+        .ticker-inner{display:flex;animation:ticker 28s linear infinite;white-space:nowrap;}
+        .ticker-item{font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:3px;text-transform:uppercase;padding:0 40px;display:flex;align-items:center;gap:40px;}
+        .ticker-dot{width:3px;height:3px;background:#ff1744;border-radius:50%;}
+        @keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 
-        /* HERO */
-        .hero {
-          position: relative; z-index: 1; min-height: 100vh;
-          display: grid; grid-template-columns: 1fr 1fr;
-          align-items: center; padding: 120px 60px 80px; gap: 80px;
-        }
-        .hero-left {}
-        .hero-eyebrow {
-          font-family: 'JetBrains Mono', monospace; font-size: 10px;
-          color: #CC0000; letter-spacing: 4px; text-transform: uppercase;
-          display: flex; align-items: center; gap: 12px; margin-bottom: 28px;
-        }
-        .hero-eyebrow::before { content: ''; width: 24px; height: 1px; background: #CC0000; }
-        .hero-h1 {
-          font-size: clamp(48px, 5.5vw, 80px); font-weight: 900;
-          line-height: 1; letter-spacing: -3px; margin-bottom: 24px;
-        }
-        .hero-h1 em { font-style: normal; color: #CC0000; }
-        .hero-sub { font-size: 16px; color: #555; line-height: 1.7; margin-bottom: 40px; max-width: 440px; }
-        .hero-actions { display: flex; gap: 16px; align-items: center; margin-bottom: 56px; }
-        .btn-primary {
-          background: #CC0000; color: #fff; border: none;
-          padding: 15px 36px; font-size: 14px; font-weight: 700;
-          cursor: pointer; letter-spacing: 0.3px; transition: all 0.3s;
-          clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
-        }
-        .btn-primary:hover { background: #e60000; transform: translateY(-2px); box-shadow: 0 12px 32px rgba(204,0,0,0.3); }
-        .btn-secondary {
-          background: none; color: #555; border: none;
-          padding: 15px 0; font-size: 13px; cursor: pointer;
-          display: flex; align-items: center; gap: 6px; transition: color 0.3s;
-          font-family: 'JetBrains Mono', monospace; letter-spacing: 0.5px;
-        }
-        .btn-secondary:hover { color: #fff; }
-        .hero-stats { display: flex; gap: 32px; }
-        .hero-stat-num { font-size: 28px; font-weight: 900; color: #fff; letter-spacing: -1px; }
-        .hero-stat-label { font-size: 11px; color: #333; margin-top: 2px; letter-spacing: 0.5px; }
+        .social{position:relative;z-index:1;padding:32px 64px;background:rgba(255,255,255,0.01);border-bottom:1px solid rgba(255,255,255,0.05);}
+        .social-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:40px;}
+        .social-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:3px;text-transform:uppercase;white-space:nowrap;}
+        .social-line{width:1px;height:24px;background:rgba(255,255,255,0.08);flex-shrink:0;}
+        .social-logos{display:flex;gap:36px;flex-wrap:wrap;}
+        .social-logo{font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(255,255,255,0.45);font-weight:700;letter-spacing:2px;text-transform:uppercase;transition:color .4s;}
+        .social-logo:hover{color:rgba(255,23,68,0.6);}
 
-        /* FLOATING CARDS */
-        .hero-right { position: relative; height: 500px; }
-        .float-card {
-          position: absolute;
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 10px; padding: 14px 16px;
-          display: flex; align-items: center; gap: 10px;
-          min-width: 240px; max-width: 300px;
-          animation: float linear infinite;
-        }
-        .float-card:nth-child(1) { top: 20px; left: 10%; animation-duration: 6s; animation-delay: 0s; }
-        .float-card:nth-child(2) { top: 100px; right: 5%; animation-duration: 7s; animation-delay: -2s; }
-        .float-card:nth-child(3) { top: 190px; left: 5%; animation-duration: 5.5s; animation-delay: -1s; }
-        .float-card:nth-child(4) { top: 280px; right: 8%; animation-duration: 6.5s; animation-delay: -3s; }
-        .float-card:nth-child(5) { top: 370px; left: 15%; animation-duration: 7.5s; animation-delay: -1.5s; }
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-12px); }
-        }
-        .fc-sev {
-          font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700;
-          padding: 3px 7px; border-radius: 3px; letter-spacing: 1px; white-space: nowrap;
-        }
-        .fc-content { flex: 1; }
-        .fc-title { font-size: 12px; font-weight: 600; color: #ccc; margin-bottom: 2px; }
-        .fc-meta { font-size: 10px; color: #444; font-family: 'JetBrains Mono', monospace; }
-        .fc-cvss { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; margin-left: auto; }
+        .section{position:relative;z-index:1;padding:120px 64px;}
+        .s-inner{max-width:1200px;margin:0 auto;}
+        .eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,23,68,0.8);letter-spacing:4px;text-transform:uppercase;margin-bottom:16px;}
+        .h2{font-size:clamp(36px,3.8vw,58px);font-weight:900;letter-spacing:-2.5px;line-height:1.02;margin-bottom:16px;}
+        .lead{font-size:15px;color:rgba(255,255,255,0.55);line-height:1.75;max-width:460px;}
 
-        /* MARQUEE */
-        .marquee { overflow: hidden; border-top: 1px solid #0f0f0f; border-bottom: 1px solid #0f0f0f; padding: 14px 0; background: #030303; position: relative; z-index: 1; }
-        .marquee-inner { display: flex; animation: marquee 25s linear infinite; white-space: nowrap; }
-        .marquee-item { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #222; letter-spacing: 3px; text-transform: uppercase; padding: 0 40px; display: flex; align-items: center; gap: 40px; }
-        .marquee-dot { width: 3px; height: 3px; background: #CC0000; border-radius: 50%; opacity: 0.4; }
-        @keyframes marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+        .term-section{position:relative;z-index:1;padding:120px 64px;background:rgba(255,23,68,0.015);border-top:1px solid rgba(255,255,255,0.05);border-bottom:1px solid rgba(255,255,255,0.05);}
+        .term-grid{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;}
+        .term-win{background:rgba(8,8,8,0.85);border:1px solid rgba(255,23,68,0.1);border-radius:12px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.6),0 0 60px rgba(255,23,68,0.05);}
+        .term-bar{background:rgba(255,255,255,0.03);padding:12px 16px;display:flex;align-items:center;gap:7px;border-bottom:1px solid rgba(255,255,255,0.06);}
+        .t-dot{width:11px;height:11px;border-radius:50%;}
+        .t-title{font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,0.15);margin-left:8px;}
+        .term-body{padding:20px 24px;min-height:240px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.9;}
+        .t-line{animation:fadeUp .35s ease forwards;}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+        .t-cur{display:inline-block;width:8px;height:13px;background:#ff1744;animation:blink 1s infinite;vertical-align:middle;margin-left:2px;}
+        @keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
 
-        /* SECTIONS */
-        .section { position: relative; z-index: 1; padding: 120px 60px; }
-        .section-inner { max-width: 1200px; margin: 0 auto; }
-        .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #CC0000; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 16px; }
-        .h2 { font-size: clamp(32px, 3.5vw, 56px); font-weight: 900; letter-spacing: -2px; line-height: 1.05; margin-bottom: 16px; }
-        .lead { font-size: 16px; color: #555; line-height: 1.7; max-width: 480px; }
+        .bento{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(255,255,255,0.05);margin-top:64px;border:1px solid rgba(255,255,255,0.05);border-radius:16px;overflow:hidden;}
+        .gc{background:rgba(255,255,255,0.015);padding:36px;position:relative;overflow:hidden;transition:background .3s,box-shadow .3s;}
+        .gc:hover{background:rgba(255,23,68,0.03);box-shadow:inset 0 0 60px rgba(255,23,68,0.04);}
+        .gc-wide{grid-column:span 2;}
+        .gc-tag{font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(255,23,68,0.7);border:1px solid rgba(255,23,68,0.15);padding:3px 8px;letter-spacing:2px;text-transform:uppercase;display:inline-block;margin-bottom:16px;border-radius:3px;}
+        .gc-title{font-size:17px;font-weight:700;margin-bottom:8px;letter-spacing:-.3px;color:rgba(255,255,255,0.9);}
+        .gc-desc{font-size:13px;color:rgba(255,255,255,0.5);line-height:1.65;}
+        .mf{display:flex;gap:8px;align-items:center;padding:7px 10px;background:rgba(255,255,255,0.03);border-radius:4px;margin-bottom:4px;border:1px solid rgba(255,255,255,0.05);}
+        .mf-bar{width:2px;height:18px;border-radius:1px;flex-shrink:0;}
+        .mf-title{font-size:10px;color:rgba(255,255,255,0.5);font-family:'JetBrains Mono',monospace;flex:1;}
+        .mf-score{font-size:9px;color:rgba(255,255,255,0.2);font-family:'JetBrains Mono',monospace;}
 
-        /* TERMINAL */
-        .terminal-section { position: relative; z-index: 1; padding: 120px 60px; background: #030303; border-top: 1px solid #0f0f0f; border-bottom: 1px solid #0f0f0f; }
-        .terminal-inner { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
-        .terminal-window {
-          background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 10px; overflow: hidden;
-          box-shadow: 0 32px 80px rgba(0,0,0,0.6);
-        }
-        .terminal-bar { background: #111; padding: 12px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #1a1a1a; }
-        .t-dot { width: 11px; height: 11px; border-radius: 50%; }
-        .t-title { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #333; margin-left: 8px; }
-        .terminal-body { padding: 20px; min-height: 280px; }
-        .t-line { font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.8; display: flex; align-items: center; gap: 8px; }
-        .t-line.entering { animation: fadeInUp 0.3s ease forwards; }
-        @keyframes fadeInUp { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
-        .t-cursor { display: inline-block; width: 8px; height: 14px; background: #CC0000; animation: blink 1s infinite; vertical-align: middle; }
-        @keyframes blink { 0%,50%{opacity:1} 51%,100%{opacity:0} }
+        .nums{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(255,255,255,0.05);max-width:1200px;margin:0 auto 120px;border:1px solid rgba(255,255,255,0.05);border-radius:16px;overflow:hidden;}
+        .nc{background:rgba(255,255,255,0.015);padding:52px 40px;text-align:center;transition:background .3s;}
+        .nc:hover{background:rgba(255,23,68,0.03);}
+        .nc-v{font-size:60px;font-weight:900;letter-spacing:-3px;line-height:1;display:block;margin-bottom:10px;}
+        .nc-l{font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(255,255,255,0.2);letter-spacing:2px;text-transform:uppercase;}
 
-        /* BENTO FEATURES */
-        .bento { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #0f0f0f; border: 1px solid #0f0f0f; margin-top: 64px; }
-        .bc { background: #080808; padding: 36px; position: relative; overflow: hidden; transition: background 0.3s; }
-        .bc:hover { background: #0c0c0c; }
-        .bc::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 50% 0%, rgba(204,0,0,0.04) 0%, transparent 60%); opacity: 0; transition: opacity 0.3s; }
-        .bc:hover::after { opacity: 1; }
-        .bc-wide { grid-column: span 2; }
-        .bc-tag { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #CC0000; border: 1px solid rgba(204,0,0,0.15); padding: 3px 8px; letter-spacing: 2px; text-transform: uppercase; display: inline-block; margin-bottom: 16px; }
-        .bc-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.3px; }
-        .bc-desc { font-size: 13px; color: #444; line-height: 1.6; }
-        .bc-visual { margin-top: 20px; }
+        .wf-row{display:grid;grid-template-columns:repeat(4,1fr);margin-top:64px;position:relative;}
+        .wf-row::before{content:'';position:absolute;top:23px;left:12%;right:12%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,23,68,0.3),rgba(255,23,68,0.3),transparent);}
+        .wf-item{text-align:center;padding:0 24px;}
+        .wf-n{width:48px;height:48px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(255,23,68,0.8);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;border-radius:8px;position:relative;z-index:1;transition:all .3s;}
+        .wf-item:hover .wf-n{border-color:rgba(255,23,68,0.4);box-shadow:0 0 20px rgba(255,23,68,0.15);}
+        .wf-t{font-size:14px;font-weight:700;margin-bottom:8px;color:rgba(255,255,255,0.85);}
+        .wf-d{font-size:12px;color:rgba(255,255,255,0.5);line-height:1.65;}
 
-        /* NUMBERS */
-        .numbers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: #0f0f0f; border: 1px solid #0f0f0f; max-width: 1200px; margin: 0 auto 120px; }
-        .nc { background: #080808; padding: 48px 36px; text-align: center; }
-        .nc-val { font-size: 56px; font-weight: 900; letter-spacing: -2px; line-height: 1; display: block; margin-bottom: 8px; }
-        .nc-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #333; letter-spacing: 2px; text-transform: uppercase; }
+        .tools-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-top:40px;}
+        .tool{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.25);padding:8px 18px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;transition:all .3s;border-radius:6px;}
+        .tool:hover{background:rgba(255,23,68,0.08);border-color:rgba(255,23,68,0.3);color:#ff1744;}
 
-        /* WORKFLOW */
-        .wf-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 64px; position: relative; }
-        .wf-grid::before { content: ''; position: absolute; top: 25px; left: 12.5%; right: 12.5%; height: 1px; background: linear-gradient(90deg, transparent, rgba(204,0,0,0.2), rgba(204,0,0,0.2), transparent); }
-        .wf { text-align: center; padding: 0 24px; }
-        .wf-num { width: 50px; height: 50px; border: 1px solid #1a1a1a; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #CC0000; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; background: #050505; position: relative; z-index: 1; }
-        .wf-title { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
-        .wf-desc { font-size: 12px; color: #444; line-height: 1.6; }
+        .cta-sec{position:relative;z-index:1;padding:160px 64px;text-align:center;background:radial-gradient(ellipse 80% 60% at 50% 50%,rgba(255,23,68,0.08) 0%,transparent 60%);border-top:1px solid rgba(255,255,255,0.05);overflow:hidden;}
+        .cta-badge{display:inline-flex;align-items:center;gap:10px;background:rgba(255,23,68,0.08);border:1px solid rgba(255,23,68,0.2);color:#ff1744;padding:8px 20px;margin-bottom:32px;border-radius:100px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;}
+        .cta-live{width:6px;height:6px;background:#ff1744;border-radius:50%;animation:pulse 1.5s infinite;}
+        @keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.6);opacity:.5}}
+        .cta-h2{font-size:clamp(44px,6vw,88px);font-weight:900;letter-spacing:-4px;line-height:.95;margin-bottom:20px;}
+        .cta-h2 span{color:#ff1744;text-shadow:0 0 40px rgba(255,23,68,0.6);}
+        .cta-sub{font-size:16px;color:rgba(255,255,255,0.55);margin-bottom:12px;max-width:480px;margin-left:auto;margin-right:auto;line-height:1.65;}
+        .cta-fine{font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:48px;letter-spacing:.5px;}
+        .btn-cta{display:inline-block;background:linear-gradient(135deg,#ff1744,#b3000f);color:#fff;border:none;padding:20px 60px;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:2px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,0 100%);transition:all .3s;margin-bottom:28px;box-shadow:0 16px 48px rgba(255,23,68,0.35),inset 0 1px 0 rgba(255,255,255,0.15);}
+        .btn-cta:hover{transform:scale(1.02);box-shadow:0 24px 64px rgba(255,23,68,0.55);}
+        .trust-row{display:flex;align-items:center;justify-content:center;gap:32px;flex-wrap:wrap;}
+        .trust-item{font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,0.45);letter-spacing:1px;display:flex;align-items:center;gap:6px;}
+        .trust-item::before{content:'✓';color:#ff1744;}
 
-        /* SOCIAL PROOF */
-        .social { position: relative; z-index: 1; padding: 48px 60px; border-top: 1px solid #0d0d0d; border-bottom: 1px solid #0d0d0d; background: #030303; }
-        .social-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; gap: 40px; }
-        .social-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #2a2a2a; letter-spacing: 3px; white-space: nowrap; text-transform: uppercase; }
-        .social-divider { width: 1px; height: 32px; background: #111; }
-        .social-logos { display: flex; gap: 36px; flex-wrap: wrap; }
-        .social-logo { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #1e1e1e; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; transition: color 0.3s; }
-        .social-logo:hover { color: #333; }
+        .footer{position:relative;z-index:1;border-top:1px solid rgba(255,255,255,0.05);padding:36px 64px;display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,0.2);flex-wrap:wrap;gap:16px;}
+        .footer img{height:26px;opacity:0.25;cursor:pointer;transition:opacity .3s;}
+        .footer img:hover{opacity:.4;}
+        .footer-t{font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,0.35);letter-spacing:1px;}
 
-        /* TOOLS */
-        .tools-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 40px; }
-        .tool { border: 1px solid #111; color: #333; padding: 8px 18px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; transition: all 0.3s; cursor: default; }
-        .tool:hover { border-color: #CC0000; color: #CC0000; }
+        .demo-ov{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:40px;backdrop-filter:blur(10px);}
+        .demo-modal{background:rgba(8,8,8,0.92);border:1px solid rgba(255,23,68,0.12);border-radius:14px;width:100%;max-width:760px;max-height:90vh;overflow:hidden;box-shadow:0 80px 200px rgba(0,0,0,0.9);}
+        .demo-bar{background:rgba(255,255,255,0.03);padding:12px 16px;display:flex;align-items:center;gap:7px;border-bottom:1px solid rgba(255,255,255,0.06);}
+        .demo-dot{width:11px;height:11px;border-radius:50%;cursor:pointer;}
+        .demo-url{flex:1;background:rgba(255,255,255,0.04);border-radius:4px;height:22px;margin:0 8px;display:flex;align-items:center;padding:0 10px;border:1px solid rgba(255,255,255,0.05);}
+        .demo-url span{font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,0.2);}
+        .demo-body{overflow-y:auto;max-height:calc(90vh - 48px);padding:24px;}
 
-        /* CTA */
-        .cta { position: relative; z-index: 1; padding: 160px 60px; text-align: center; background: #030303; border-top: 1px solid #0f0f0f; overflow: hidden; }
-        .cta-glow { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 700px; height: 500px; background: radial-gradient(ellipse, rgba(204,0,0,0.06) 0%, transparent 65%); pointer-events: none; }
-        .cta-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(204,0,0,0.07); border: 1px solid rgba(204,0,0,0.12); color: #CC0000; padding: 7px 18px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 28px; }
-        .cta-live { width: 6px; height: 6px; background: #CC0000; border-radius: 50%; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.4);opacity:0.6} }
-        .cta-h2 { font-size: clamp(40px, 5.5vw, 80px); font-weight: 900; letter-spacing: -3px; line-height: 1; margin-bottom: 16px; }
-        .cta-sub { font-size: 16px; color: #444; margin-bottom: 12px; max-width: 520px; margin-left: auto; margin-right: auto; line-height: 1.6; }
-        .cta-fine { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #222; margin-bottom: 48px; letter-spacing: 0.5px; }
-        .btn-cta { background: #CC0000; color: #fff; border: none; padding: 20px 56px; font-size: 14px; font-weight: 800; cursor: pointer; letter-spacing: 1.5px; text-transform: uppercase; font-family: 'JetBrains Mono', monospace; transition: all 0.3s; clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%); display: inline-block; margin-bottom: 24px; }
-        .btn-cta:hover { background: #e60000; transform: scale(1.02); box-shadow: 0 16px 48px rgba(204,0,0,0.35); }
-        .cta-trust { display: flex; align-items: center; justify-content: center; gap: 24px; flex-wrap: wrap; }
-        .cta-trust-item { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #222; letter-spacing: 1px; display: flex; align-items: center; gap: 6px; }
-        .cta-trust-item::before { content: '✓'; color: #CC0000; }
-
-        /* FOOTER */
-        .footer { position: relative; z-index: 1; border-top: 1px solid #0d0d0d; padding: 36px 60px; display: flex; align-items: center; justify-content: space-between; }
-        .footer-logo img { height: 28px; opacity: 0.4; }
-        .footer-text { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #1e1e1e; letter-spacing: 1px; }
-
-        /* DEMO MODAL */
-        .demo-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 40px; backdrop-filter: blur(8px); }
-        .demo-modal { background: #080808; border: 1px solid #1a1a1a; border-radius: 12px; width: 100%; max-width: 780px; max-height: 90vh; overflow: hidden; box-shadow: 0 60px 160px rgba(0,0,0,0.9); }
-        .demo-bar { background: #0d0d0d; padding: 12px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #111; }
-        .demo-dot { width: 11px; height: 11px; border-radius: 50%; cursor: pointer; }
-        .demo-url { flex: 1; background: #111; border-radius: 4px; height: 24px; margin: 0 8px; display: flex; align-items: center; padding: 0 12px; }
-        .demo-url-text { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #333; }
-        .demo-body { overflow-y: auto; max-height: calc(90vh - 52px); padding: 28px; }
-
-        /* Mini finding in bento */
-        .mf { display: flex; gap: 8px; align-items: center; padding: 8px 10px; background: #0d0d0d; border-radius: 3px; margin-bottom: 5px; }
-        .mf-bar { width: 3px; height: 20px; border-radius: 2px; flex-shrink: 0; }
-        .mf-title { font-size: 10px; color: #777; font-family: 'JetBrains Mono', monospace; flex: 1; }
-        .mf-score { font-size: 9px; color: #333; font-family: 'JetBrains Mono', monospace; }
-
-        /* Canvas */
-        #particle-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
-
-        @media (max-width: 900px) {
-          .hero { grid-template-columns: 1fr; padding: 100px 24px 60px; }
-          .hero-right { display: none; }
-          .section, .terminal-section, .cta { padding: 80px 24px; }
-          .nav { padding: 16px 24px; }
-          .nav.scrolled { padding: 12px 24px; }
-          .bento { grid-template-columns: 1fr; }
-          .bc-wide { grid-column: span 1; }
-          .numbers { grid-template-columns: repeat(2, 1fr); }
-          .wf-grid { grid-template-columns: repeat(2, 1fr); gap: 32px; }
-          .footer { flex-direction: column; gap: 16px; text-align: center; }
+        @media(max-width:900px){
+          .hero-pin-wrap{height:auto;}
+          .hero-pin{position:relative;height:auto;min-height:100vh;padding:140px 24px 80px;}
+          .hero-title{font-size:clamp(40px,12vw,70px);}
+          .hero-late{position:static;transform:none;margin-top:40px;}
+          .fc-field{display:none;}
+          .section,.term-section,.cta-sec{padding:80px 24px;}
+          .nav,.nav.scrolled{padding:16px 24px;}
+          .social,.ticker{padding-left:24px;padding-right:24px;}
+          .bento{grid-template-columns:1fr;}
+          .gc-wide{grid-column:span 1;}
+          .nums{grid-template-columns:repeat(2,1fr);}
+          .wf-row{grid-template-columns:repeat(2,1fr);gap:32px;}
+          .footer{flex-direction:column;gap:16px;text-align:center;padding:24px;}
+          .term-grid{grid-template-columns:1fr;}
         }
       `}</style>
 
-      <canvas ref={canvasRef} id="particle-canvas" />
+      <div className="bg-mesh" />
+      <div className="grid-overlay" />
 
-      {/* NAV */}
       <nav className={`nav ${scrolled ? 'scrolled' : ''}`}>
-        <img src="/logo.png" alt="RedScribe" style={{height:'46px', cursor:'pointer'}} onClick={() => router.push('/')} />
+        <div className="nav-logo" onClick={() => router.push('/')}>
+          <img src="/logo.png" alt="RedScribe" />
+        </div>
         <div className="nav-links">
           <a className="nav-link" href="#features">Features</a>
           <a className="nav-link" href="#workflow">Workflow</a>
@@ -392,269 +281,283 @@ export default function LandingPage() {
         <button className="nav-cta" onClick={() => router.push('/login')}>Get Access</button>
       </nav>
 
-      {/* HERO */}
-      <section className="hero">
-        <div className="hero-left">
-          <div className="hero-eyebrow reveal">AI Pentest Reporting</div>
-          <h1 className="hero-h1 reveal">
-            Raw scans.<br/>
-            <em>Client-ready</em><br/>
-            reports.
+      {/* PINNED KINETIC HERO */}
+      <div className="hero-pin-wrap" ref={heroPinRef}>
+        <div className="hero-pin">
+          <div className="hero-tag" style={{ opacity: subOpacity }}>AI Pentest Reporting</div>
+
+          <h1
+            className={`hero-title ${glitch ? 'glitch' : ''}`}
+            style={{
+              transform: `translateY(${titleY}px) scale(${titleScale}) skewX(${titleSkew}deg)`,
+            }}
+          >
+            <span style={{ display: 'block' }}>Raw scans.</span>
+            <span className="line2" style={{ display: 'block' }}>Client-ready</span>
+            <span style={{ display: 'block' }}>reports.</span>
           </h1>
-          <p className="hero-sub reveal">
+
+          <p className="hero-sub" style={{ opacity: subOpacity }}>
             RedScribe turns your Nmap, Burp, and Nessus output into professional penetration testing reports in minutes — not days.
           </p>
-          <div className="hero-actions reveal">
-            <button className="btn-primary" onClick={() => router.push('/login')}>Get Early Access</button>
-            <button className="btn-secondary" onClick={() => setShowDemo(true)}>View Demo Report →</button>
-          </div>
-          <div className="hero-stats reveal stagger">
-            {[['10x','Faster reports'],['20+','Finding templates'],['3','Scan formats']].map(([n,l]) => (
-              <div key={l}>
-                <div className="hero-stat-num">{n}</div>
-                <div className="hero-stat-label">{l}</div>
-              </div>
-            ))}
-          </div>
-        </div>
 
-        {/* Floating vulnerability cards */}
-        <div className="hero-right">
-          {FINDINGS.slice(0, 5).map((f, i) => (
-            <div key={f.title} className="float-card reveal" style={{transitionDelay: `${i * 0.1}s`}}>
-              <div className="fc-sev" style={{background: `${f.color}18`, color: f.color, border: `1px solid ${f.color}30`}}>{f.sev}</div>
-              <div className="fc-content">
-                <div className="fc-title">{f.title}</div>
-                <div className="fc-meta">{f.cwe}</div>
-              </div>
-              <div className="fc-cvss" style={{color: f.color}}>{f.cvss}</div>
+          <div className="fc-field">
+            {FINDINGS.map((f, i) => {
+              const positions = [
+                { top: '14%', left: '6%' },
+                { top: '22%', right: '5%' },
+                { top: '62%', left: '4%' },
+                { top: '68%', right: '7%' },
+                { top: '40%', left: '50%' },
+              ];
+              return (
+                <div
+                  key={f.title}
+                  className="fc"
+                  style={{
+                    ...positions[i],
+                    opacity: Math.min(1, Math.max(0, (heroProgress - 0.15 - i * 0.05) * 4)),
+                    transform: `translateY(${(1 - Math.min(1, Math.max(0, (heroProgress - 0.15 - i * 0.05) * 4))) * 20}px)`,
+                  }}
+                >
+                  <div className="fc-sev" style={{ background: `${f.color}18`, color: f.color, border: `1px solid ${f.color}35` }}>{f.sev}</div>
+                  <div className="fc-title">{f.title}</div>
+                  <div className="fc-cvss" style={{ color: f.color }}>{f.cvss}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="hero-late" style={{ opacity: lateOpacity, transform: `translate(-50%, ${lateY}px)` }}>
+            <div className="hero-btns">
+              <button className="btn-primary" onClick={() => router.push('/login')}>Get Early Access</button>
+              <button className="btn-outline" onClick={() => setShowDemo(true)}>View Demo Report</button>
             </div>
-          ))}
-        </div>
-      </section>
+            <div className="hero-stats">
+              {[['10x', 'Faster reports'], ['20+', 'Templates'], ['3', 'Scan formats']].map(([n, l]) => (
+                <div key={l}>
+                  <div className="stat-n">{n}</div>
+                  <div className="stat-l">{l}</div>
+                </div>
+              ))}
+            </div>
+          </div>
 
-      {/* SOCIAL PROOF */}
+          <div className="scroll-hint" style={{ opacity: subOpacity }}>
+            <span>Scroll</span>
+            <div className="scroll-line" />
+          </div>
+        </div>
+      </div>
+
       <div className="social">
         <div className="social-inner">
           <div className="social-label">Trusted by</div>
-          <div className="social-divider"/>
-          <div className="social-logos stagger">
-            {['CERT-IN','Deloitte','PwC','KPMG','Synack','HackerOne','BugCrowd'].map(n => (
+          <div className="social-line" />
+          <div className="social-logos">
+            {['CERT-IN', 'Deloitte', 'PwC', 'KPMG', 'Synack', 'HackerOne', 'BugCrowd'].map(n => (
               <div key={n} className="social-logo">{n}</div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* MARQUEE */}
-      <div className="marquee">
-        <div className="marquee-inner">
-          {[...Array(2)].map((_,i) => (
-            <div key={i} className="marquee-item">
-              <span>SQL Injection</span><div className="marquee-dot"/><span>XSS</span><div className="marquee-dot"/><span>IDOR</span><div className="marquee-dot"/><span>SSRF</span><div className="marquee-dot"/><span>RCE</span><div className="marquee-dot"/><span>Auth Bypass</span><div className="marquee-dot"/><span>Path Traversal</span><div className="marquee-dot"/><span>XXE</span><div className="marquee-dot"/><span>CSRF</span><div className="marquee-dot"/><span>Command Injection</span><div className="marquee-dot"/><span>Subdomain Takeover</span><div className="marquee-dot"/>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* TERMINAL + FEATURES */}
-      <div className="terminal-section" id="features">
-        <div className="terminal-inner">
-          <div>
-            <div className="eyebrow reveal">How it works</div>
-            <h2 className="h2 reveal">Scan to report<br/>in 47 seconds.</h2>
-            <p className="lead reveal" style={{marginTop:'16px'}}>Upload your tools output. RedScribe parses, AI enriches every finding, and generates a professional report ready to send to your client.</p>
-          </div>
-          <div className="terminal-window reveal-right" ref={terminalRef}>
-            <div className="terminal-bar">
-              <div className="t-dot" style={{background:'#ef4444'}}/>
-              <div className="t-dot" style={{background:'#eab308'}}/>
-              <div className="t-dot" style={{background:'#22c55e'}}/>
-              <div className="t-title">redscribe — terminal</div>
-            </div>
-            <div className="terminal-body">
-              {TERMINAL_LINES.map((line, i) => (
-                terminalLines.includes(i) && (
-                  <div key={i} className="t-line entering" style={{color: line.color}}>
-                    {line.text}
-                  </div>
-                )
+      <div className="ticker">
+        <div className="ticker-inner">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="ticker-item">
+              {['SQL Injection', 'XSS', 'IDOR', 'SSRF', 'RCE', 'Auth Bypass', 'Path Traversal', 'XXE', 'CSRF', 'Command Injection', 'Subdomain Takeover', 'Weak Crypto'].map((t, j) => (
+                <span key={t} style={{ display: 'contents' }}><span>{t}</span>{j < 11 && <div className="ticker-dot" />}</span>
               ))}
-              {terminalLines.length === TERMINAL_LINES.length && (
-                <div className="t-line" style={{marginTop:'4px'}}>
-                  <span className="t-cursor"/>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* BENTO FEATURES */}
-      <section className="section">
-        <div className="section-inner">
-          <div className="eyebrow reveal">Features</div>
-          <h2 className="h2 reveal">Built for the<br/>offensive workflow.</h2>
-          <div className="bento stagger">
-            <div className="bc bc-wide reveal">
-              <div className="bc-tag">Core</div>
-              <div className="bc-title">AI-Powered Enrichment</div>
-              <div className="bc-desc">One click enriches every finding with professional descriptions, business impact statements, attack scenarios, and remediation steps.</div>
-              <div className="bc-visual">
-                {[['#ef4444','SQL Injection — Login Form','9.8'],['#f97316','Open Port 3306/tcp','7.5'],['#eab308','Reflected XSS','6.1'],['#3b82f6','Missing Headers','3.1']].map(([c,t,s]) => (
-                  <div key={t as string} className="mf">
-                    <div className="mf-bar" style={{background: c as string}}/>
-                    <div className="mf-title">{t}</div>
-                    <div className="mf-score">CVSS {s}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="bc reveal">
-              <div className="bc-tag">Export</div>
-              <div className="bc-title">PDF & DOCX</div>
-              <div className="bc-desc">Pixel-perfect reports with cover pages, exec summaries, heatmaps, and embedded evidence screenshots.</div>
-            </div>
-            <div className="bc reveal">
-              <div className="bc-tag">Templates</div>
-              <div className="bc-title">20+ Finding Templates</div>
-              <div className="bc-desc">SQLi, XSS, IDOR, SSRF, RCE and more. Auto-fill findings professionally in one click.</div>
-            </div>
-            <div className="bc reveal">
-              <div className="bc-tag">Workflow</div>
-              <div className="bc-title">Attack Chain Builder</div>
-              <div className="bc-desc">Visualize how vulnerabilities chain into full attack paths. Show clients the real impact.</div>
-            </div>
-            <div className="bc bc-wide reveal">
-              <div className="bc-tag">Premium</div>
-              <div className="bc-title">Live Report Preview</div>
-              <div className="bc-desc">Edit findings on the left, see the final report update in real-time on the right. What you see is exactly what the client receives.</div>
-              <div className="bc-visual" style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', height:'64px', marginTop:'16px'}}>
-                <div style={{background:'#0d0d0d', borderRadius:'3px', padding:'8px', display:'flex', flexDirection:'column', gap:'4px'}}>
-                  {[70,100,50].map(w => <div key={w} style={{height:'5px', background:'#1a1a1a', borderRadius:'2px', width:`${w}%`}}/>)}
-                </div>
-                <div style={{background:'#0d0d0d', borderRadius:'3px', padding:'8px', display:'flex', flexDirection:'column', gap:'4px'}}>
-                  {[60,100,80].map(w => <div key={w} style={{height:'5px', background:'rgba(204,0,0,0.15)', borderRadius:'2px', width:`${w}%`}}/>)}
-                </div>
-              </div>
-            </div>
-            <div className="bc reveal">
-              <div className="bc-tag">AI</div>
-              <div className="bc-title">Rewrite Modes</div>
-              <div className="bc-desc">Technical, Executive, Compliance, Concise — one finding, four audiences, instant.</div>
-              <div style={{display:'flex', flexWrap:'wrap', gap:'6px', marginTop:'16px'}}>
-                {['Technical','Executive','Compliance','Concise'].map(t => (
-                  <div key={t} style={{background:'#111', border:'1px solid #1a1a1a', padding:'4px 10px', fontSize:'10px', color:'#444', fontFamily:"'JetBrains Mono'", letterSpacing:'0.5px'}}>{t}</div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* NUMBERS */}
-      <div style={{position:'relative', zIndex:1, padding:'0 60px'}}>
-        <div className="numbers stagger">
-          {[['10x','#CC0000','Faster reporting'],['20+','#fff','Finding templates'],['3','#CC0000','Scan formats supported'],['100%','#fff','Client-ready output']].map(([v,c,l]) => (
-            <div key={l as string} className="nc reveal">
-              <span className="nc-val" style={{color: c as string}}>{v}</span>
-              <div className="nc-label">{l}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* WORKFLOW */}
-      <section className="section" id="workflow">
-        <div className="section-inner">
-          <div className="eyebrow reveal">Workflow</div>
-          <h2 className="h2 reveal">From scan to PDF.<br/>Four steps.</h2>
-          <div className="wf-grid stagger">
-            {[['01','Upload','Drop Nmap, Burp Suite, or Nessus files. Parsed instantly.'],
-              ['02','Enrich','AI writes descriptions, impact, and remediation for every finding.'],
-              ['03','Edit','Fine-tune in the live split-screen preview.'],
-              ['04','Export','Download client-ready PDF or DOCX.'],
-            ].map(([n,t,d]) => (
-              <div key={n} className="wf reveal">
-                <div className="wf-num">{n}</div>
-                <div className="wf-title">{t}</div>
-                <div className="wf-desc">{d}</div>
+      <div className="term-section" id="features">
+        <div className="term-grid">
+          <div>
+            <div className="eyebrow" data-reveal>How it works</div>
+            <h2 className="h2" data-reveal data-delay="0.1">Scan to report<br />in 47 seconds.</h2>
+            <p className="lead" data-reveal data-delay="0.2" style={{ marginTop: '16px' }}>Upload your scanner output. RedScribe parses, AI enriches every finding, and generates a professional client report automatically.</p>
+          </div>
+          <div className="term-win" data-reveal="right" data-delay="0.1" ref={termRef}>
+            <div className="term-bar">
+              <div className="t-dot" style={{ background: '#ff1744' }} />
+              <div className="t-dot" style={{ background: '#ffd600' }} />
+              <div className="t-dot" style={{ background: '#22c55e' }} />
+              <div className="t-title">redscribe — zsh</div>
+            </div>
+            <div className="term-body">
+              {TERMINAL_LINES.map((line, i) => termLines.includes(i) && (
+                <div key={i} className="t-line" style={{ color: line.color }}>{line.text}</div>
+              ))}
+              {termLines.length > 0 && termLines.length < TERMINAL_LINES.length && <span className="t-cur" />}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section className="section">
+        <div className="s-inner">
+          <div className="eyebrow" data-reveal>Features</div>
+          <h2 className="h2" data-reveal data-delay="0.1">Built for the<br />offensive workflow.</h2>
+          <div className="bento">
+            {[
+              { tag: 'Core', title: 'AI-Powered Enrichment', desc: 'One click enriches every finding with professional descriptions, business impact, attack scenarios, and remediation steps.', wide: true, visual: true, d: '0' },
+              { tag: 'Export', title: 'PDF & DOCX Reports', desc: 'Pixel-perfect reports with cover pages, executive summaries, severity heatmaps, and embedded evidence.', wide: false, d: '0.1' },
+              { tag: 'Templates', title: '20+ Finding Templates', desc: 'SQLi, XSS, IDOR, SSRF, RCE. Auto-fill professionally.', wide: false, d: '0.2' },
+              { tag: 'Workflow', title: 'Attack Chain Builder', desc: 'Visualize full attack paths from initial access to exfiltration.', wide: false, d: '0.3' },
+              { tag: 'Premium', title: 'Live Report Preview', desc: 'Edit on the left, see the final report update in real-time on the right.', wide: true, d: '0.4' },
+              { tag: 'AI', title: 'Rewrite Modes', desc: 'Technical, Executive, Compliance, Concise — one finding, four audiences.', wide: false, ai: true, d: '0.5' },
+            ].map((c) => (
+              <div key={c.title} className={`gc ${c.wide ? 'gc-wide' : ''}`} data-reveal data-delay={c.d}>
+                <div className="gc-tag">{c.tag}</div>
+                <div className="gc-title">{c.title}</div>
+                <div className="gc-desc">{c.desc}</div>
+                {c.visual && (
+                  <div style={{ marginTop: '20px' }}>
+                    {[['#ff1744', 'SQL Injection — Login Form', '9.8'], ['#ff6d00', 'Open Port 3306/tcp', '7.5'], ['#ffd600', 'Reflected XSS', '6.1'], ['#3b82f6', 'Missing Headers', '3.1']].map(([cl, t, s]) => (
+                      <div key={t as string} className="mf">
+                        <div className="mf-bar" style={{ background: cl as string }} />
+                        <div className="mf-title">{t}</div>
+                        <div className="mf-score">CVSS {s}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {(c as any).ai && (
+                  <div style={{ display: 'flex', gap: '6px', marginTop: '16px', flexWrap: 'wrap' }}>
+                    {['Technical', 'Executive', 'Compliance', 'Concise'].map(t => (
+                      <div key={t} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '4px 10px', fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: "'JetBrains Mono'", letterSpacing: '1px', borderRadius: '4px' }}>{t}</div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* TOOLS */}
-      <section className="section" id="tools" style={{paddingTop:'0'}}>
-        <div className="section-inner">
-          <div className="eyebrow reveal">Integrations</div>
-          <h2 className="h2 reveal">Works with your stack.</h2>
-          <div className="tools-grid stagger">
-            {['Nmap','Burp Suite','Nessus','OWASP ZAP','Metasploit','Nuclei','OpenVAS','Nikto','ffuf','SQLmap','Masscan','Shodan'].map(t => (
-              <div key={t} className="tool reveal">{t}</div>
+      <div style={{ position: 'relative', zIndex: 1, padding: '0 64px' }}>
+        <div className="nums">
+          {[['10x', '#ff1744', 'Faster reporting'], ['20+', 'rgba(255,255,255,0.9)', 'Finding templates'], ['3', '#ff1744', 'Scan formats'], ['100%', 'rgba(255,255,255,0.9)', 'Client-ready']].map(([v, c, l], i) => (
+            <div key={l as string} className="nc" data-reveal data-delay={`${i * 0.1}`}>
+              <span className="nc-v" style={{ color: c as string }}>{v}</span>
+              <div className="nc-l">{l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <section className="section" id="workflow">
+        <div className="s-inner">
+          <div className="eyebrow" data-reveal>Workflow</div>
+          <h2 className="h2" data-reveal data-delay="0.1">Four steps.<br />Zero friction.</h2>
+          <div className="wf-row">
+            {[['01', 'Upload', 'Drop Nmap, Burp Suite, or Nessus files. Parsed instantly.', '0'],
+              ['02', 'Enrich', 'AI writes professional descriptions and remediation.', '0.1'],
+              ['03', 'Edit', 'Fine-tune in the live split-screen preview.', '0.2'],
+              ['04', 'Export', 'Client-ready PDF or DOCX in one click.', '0.3'],
+            ].map(([n, t, d, dl]) => (
+              <div key={n} className="wf-item" data-reveal data-delay={dl}>
+                <div className="wf-n">{n}</div>
+                <div className="wf-t">{t}</div>
+                <div className="wf-d">{d}</div>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <div className="cta">
-        <div className="cta-glow"/>
-        <div className="cta-badge reveal"><div className="cta-live"/><span>Early Access Open</span></div>
-        <h2 className="cta-h2 reveal">Stop writing.<br/>Start shipping.</h2>
-        <p className="cta-sub reveal">The reporting tool pentesters wished existed. Built by security professionals, for security professionals.</p>
-        <p className="cta-fine reveal">No credit card · Free during beta · Unlimited exports</p>
-        <div className="reveal">
+      <section className="section" id="tools" style={{ paddingTop: '0' }}>
+        <div className="s-inner">
+          <div className="eyebrow" data-reveal>Integrations</div>
+          <h2 className="h2" data-reveal data-delay="0.1">Works with<br />your stack.</h2>
+          <div className="tools-wrap">
+            {['Nmap', 'Burp Suite', 'Nessus', 'OWASP ZAP', 'Metasploit', 'Nuclei', 'OpenVAS', 'Nikto', 'ffuf', 'SQLmap', 'Masscan', 'Shodan'].map((t, i) => (
+              <div key={t} className="tool" data-reveal data-delay={`${(i % 4) * 0.08}`}>{t}</div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="cta-sec">
+        <div className="cta-badge" data-reveal><div className="cta-live" /><span>Early Access Open</span></div>
+        <h2 className="cta-h2" data-reveal data-delay="0.1">Stop writing.<br /><span>Start shipping.</span></h2>
+        <p className="cta-sub" data-reveal data-delay="0.2">The reporting tool pentesters wished existed.</p>
+        <p className="cta-fine" data-reveal data-delay="0.3">No credit card · Free during beta · Unlimited exports</p>
+        <div data-reveal data-delay="0.4">
           <button className="btn-cta" onClick={() => router.push('/login')}>Get Early Access →</button>
         </div>
-        <div className="cta-trust reveal stagger">
-          {['No credit card required','Free during beta','Used by 200+ pentesters','Export unlimited reports'].map(t => (
-            <div key={t} className="cta-trust-item">{t}</div>
+        <div className="trust-row" data-reveal data-delay="0.5">
+          {['No credit card', 'Free during beta', '200+ pentesters', 'Unlimited exports'].map(t => (
+            <div key={t} className="trust-item">{t}</div>
           ))}
         </div>
       </div>
 
-      {/* FOOTER */}
       <footer className="footer">
-        <img src="/logo.png" alt="RedScribe" style={{height:'28px', opacity:0.35, cursor:'pointer'}} onClick={() => router.push('/')}/>
-        <div className="footer-text">AI-Powered Pentest Reporting</div>
-        <div className="footer-text">© 2026 RedScribe. All rights reserved.</div>
+        <img src="/logo.png" alt="RedScribe" onClick={() => router.push('/')} />
+        <div className="footer-t">AI-Powered Pentest Reporting</div>
+        <div className="footer-t" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span>© 2026 RedScribe</span>
+          <span style={{ opacity: 0.3 }}>·</span>
+          <span>
+            Developed by{' '}
+            <a
+              href="https://salman2610.github.io/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'rgba(255,23,68,0.8)', textDecoration: 'none' }}
+            >
+              Salmanul Faris
+            </a>
+            {' · '}
+            <a
+              href="https://www.linkedin.com/in/p-salmanul-faris-68b733249/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'rgba(255,23,68,0.8)', textDecoration: 'none' }}
+            >
+              LinkedIn
+            </a>
+          </span>
+        </div>
       </footer>
 
-      {/* DEMO MODAL */}
       {showDemo && (
-        <div className="demo-overlay" onClick={() => setShowDemo(false)}>
+        <div className="demo-ov" onClick={() => setShowDemo(false)}>
           <div className="demo-modal" onClick={e => e.stopPropagation()}>
             <div className="demo-bar">
-              <div className="demo-dot" style={{background:'#ef4444'}} onClick={() => setShowDemo(false)}/>
-              <div className="demo-dot" style={{background:'#eab308'}}/>
-              <div className="demo-dot" style={{background:'#22c55e'}}/>
-              <div className="demo-url"><span className="demo-url-text">redscribe.app/reports/acme-corp-vapt-2026.pdf</span></div>
-              <button onClick={() => setShowDemo(false)} style={{background:'none',border:'none',color:'#333',cursor:'pointer',fontSize:'16px',lineHeight:1}}>✕</button>
+              <div className="demo-dot" style={{ background: '#ff1744' }} onClick={() => setShowDemo(false)} />
+              <div className="demo-dot" style={{ background: '#ffd600' }} />
+              <div className="demo-dot" style={{ background: '#22c55e' }} />
+              <div className="demo-url"><span>redscribe.app/reports/acme-corp-vapt-2026.pdf</span></div>
+              <button onClick={() => setShowDemo(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: '16px' }}>✕</button>
             </div>
             <div className="demo-body">
-              <div style={{background:'#0d0d0d', padding:'28px', borderRadius:'8px', marginBottom:'20px'}}>
-                <div style={{fontSize:'13px', fontWeight:'700', marginBottom:'12px'}}>Red<span style={{color:'#CC0000'}}>Scribe</span></div>
-                <div style={{fontFamily:'monospace', fontSize:'10px', color:'#CC0000', letterSpacing:'3px', textTransform:'uppercase', marginBottom:'8px'}}>// Penetration Test Report</div>
-                <div style={{fontSize:'24px', fontWeight:'900', letterSpacing:'-1px', marginBottom:'4px'}}>Acme Corp VAPT 2026</div>
-                <div style={{fontSize:'12px', color:'#444', marginBottom:'20px'}}>E-Commerce Platform · Confidential · June 2026</div>
-                <div style={{display:'flex', gap:'28px'}}>
-                  {[['8','#fff','Total'],['2','#ef4444','Critical'],['2','#f97316','High'],['3','#eab308','Medium']].map(([n,c,l]) => (
-                    <div key={l}><div style={{fontSize:'28px', fontWeight:'900', color:c as string, lineHeight:1}}>{n}</div><div style={{fontSize:'9px', color:'#333', fontFamily:'monospace', letterSpacing:'2px', textTransform:'uppercase', marginTop:'4px'}}>{l}</div></div>
+              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', padding: '28px', borderRadius: '8px', marginBottom: '20px' }}>
+                <div style={{ fontSize: '13px', fontWeight: '700', marginBottom: '12px' }}>Red<span style={{ color: '#ff1744' }}>Scribe</span></div>
+                <div style={{ fontFamily: 'monospace', fontSize: '9px', color: 'rgba(255,23,68,0.7)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '8px' }}>//  Penetration Test Report</div>
+                <div style={{ fontSize: '22px', fontWeight: '900', letterSpacing: '-1px', marginBottom: '4px' }}>Acme Corp VAPT 2026</div>
+                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)', marginBottom: '20px', fontFamily: 'monospace' }}>E-Commerce Platform · Confidential · June 2026</div>
+                <div style={{ display: 'flex', gap: '28px' }}>
+                  {[['8', 'rgba(255,255,255,0.9)', 'Total'], ['2', '#ff1744', 'Critical'], ['2', '#ff6d00', 'High'], ['3', '#ffd600', 'Medium']].map(([n, c, l]) => (
+                    <div key={l}><div style={{ fontSize: '28px', fontWeight: '900', color: c as string, lineHeight: 1 }}>{n}</div><div style={{ fontSize: '8px', color: 'rgba(255,255,255,0.2)', fontFamily: 'monospace', letterSpacing: '2px', textTransform: 'uppercase', marginTop: '4px' }}>{l}</div></div>
                   ))}
                 </div>
               </div>
-              <div style={{fontFamily:'monospace', fontSize:'9px', color:'#CC0000', letterSpacing:'3px', textTransform:'uppercase', marginBottom:'12px'}}>// Findings</div>
+              <div style={{ fontFamily: 'monospace', fontSize: '9px', color: 'rgba(255,23,68,0.7)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '12px' }}>//  Findings</div>
               {FINDINGS.map(f => (
-                <div key={f.title} style={{border:'1px solid #111', borderRadius:'6px', marginBottom:'10px', overflow:'hidden'}}>
-                  <div style={{display:'flex', alignItems:'center', gap:'10px', padding:'14px', background:'#0d0d0d', borderBottom:'1px solid #111'}}>
-                    <div style={{width:'3px', alignSelf:'stretch', background:f.color, borderRadius:'2px', minHeight:'28px'}}/>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:'13px', fontWeight:'600', marginBottom:'3px'}}>{f.title}</div>
-                      <div style={{fontSize:'10px', color:'#444', fontFamily:'monospace'}}>{f.cwe} · CVSS {f.cvss}</div>
+                <div key={f.title} style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', marginBottom: '8px', overflow: 'hidden', background: 'rgba(255,255,255,0.02)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <div style={{ width: '2px', alignSelf: 'stretch', background: f.color, minHeight: '24px', borderRadius: '1px' }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '2px', color: 'rgba(255,255,255,0.8)' }}>{f.title}</div>
+                      <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.25)', fontFamily: 'monospace' }}>{f.cwe} · CVSS {f.cvss}</div>
                     </div>
-                    <div style={{fontSize:'8px', fontWeight:'700', padding:'3px 8px', background:`${f.color}12`, color:f.color, border:`1px solid ${f.color}30`, borderRadius:'2px', letterSpacing:'1px'}}>{f.sev}</div>
+                    <div style={{ fontSize: '8px', fontWeight: '700', padding: '2px 8px', background: `${f.color}15`, color: f.color, border: `1px solid ${f.color}30`, letterSpacing: '1px', borderRadius: '3px' }}>{f.sev}</div>
                   </div>
                 </div>
               ))}
